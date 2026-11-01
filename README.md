@@ -40,7 +40,7 @@ College Event Management Platform built with React, Vite, Express, and PostgreSQ
 
 ## Demo accounts
 
-- Student: `student@campusly.dev` / `demo1234`
-- Organizer: `organizer@campusly.dev` / `demo1234`
+- Student: `student@campuserp.dev` / `demo1234`
+- Organizer: `organizer.org@campuserp.dev` / `demo1234`
 
 The backend creates the PostgreSQL tables and demo data on first startup when the users table is empty. This package does not automatically migrate data from an earlier SQLite database.
