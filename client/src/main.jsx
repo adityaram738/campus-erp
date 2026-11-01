@@ -957,7 +957,7 @@ function App() {
             {modal === 'profile' && profileDraft && (
               <>
                 <div className="modal-brand">
-                  <UserRound /> STUDENT ACCOUNT
+                  <UserRound /> {user.role === 'organizer' ? 'ORGANIZER ACCOUNT' : 'STUDENT ACCOUNT'}
                 </div>
                 <h2>My profile.</h2>
                 <p className="modal-sub">Keep your campus details up to date.</p>
@@ -991,18 +991,26 @@ function App() {
                       <input
                         name="phone"
                         type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]{10}"
+                        maxLength={10}
+                        minLength={10}
+                        placeholder="10-digit phone number"
                         defaultValue={profileDraft.phone || ''}
-                        placeholder="Your phone number"
-                      />
+                        onChange={(e) => {
+                            e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
+                        }}
+                        />
                     </label>
-                    <label>
-                      USN / Student ID
-                      <input
-                        name="usn"
-                        defaultValue={profileDraft.usn || ''}
-                        placeholder="e.g. 1BM..."
-                      />
-                    </label>
+                    {user.role === 'student' && (
+                        <label>
+                            USN / Student ID
+                            <input
+                            name="usn"
+                            defaultValue={profileDraft.usn || ''}
+                            placeholder="e.g. 1BM..." />
+                        </label>
+)}
                   </div>
                   <label>
                     Department

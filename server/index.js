@@ -242,15 +242,50 @@ app.get('/api/me/profile',auth,async (req,res) => {
 
 app.put('/api/me/profile',auth,async (req,res) => {
   const {name,email,phone='',department='',usn='',profile_image=''}=req.body;
-  if (!name?.trim() || !email?.trim()) return res.status(400).json({error:'Name and email are required.'});
-  if (profile_image && !/^data:image\/(png|jpeg|jpg|webp|gif);base64,/.test(profile_image)) return res.status(400).json({error:'Invalid profile image.'});
+
+  if (!name?.trim() || !email?.trim()) {
+    return res.status(400).json({error:'Name and email are required.'});
+  }
+
+  if (phone && !/^[0-9]{10}$/.test(phone)) {
+    return res.status(400).json({
+      error:'Phone number must contain exactly 10 digits.'
+    });
+  }
+
+  if (profile_image && !/^data:image\/(png|jpeg|jpg|webp|gif);base64,/.test(profile_image)) {
+    return res.status(400).json({error:'Invalid profile image.'});
+  }
+
   try {
-    const r=await pool.query(`UPDATE users SET name=$1,email=$2,phone=$3,department=$4,usn=$5,profile_image=$6 WHERE id=$7 RETURNING id,name,email,role,phone,department,usn,profile_image,created_at`,[name.trim(),email.trim().toLowerCase(),phone.trim(),department.trim(),usn.trim(),profile_image,req.user.id]);
-    if (!r.rows[0]) return res.status(404).json({error:'Profile not found.'});
+    const r=await pool.query(
+      `UPDATE users SET name=$1,email=$2,phone=$3,department=$4,usn=$5,profile_image=$6
+       WHERE id=$7
+       RETURNING id,name,email,role,phone,department,usn,profile_image,created_at`,
+      [
+        name.trim(),
+        email.trim().toLowerCase(),
+        phone.trim(),
+        department.trim(),
+        usn.trim(),
+        profile_image,
+        req.user.id
+      ]
+    );
+
+    if (!r.rows[0]) {
+      return res.status(404).json({error:'Profile not found.'});
+    }
+
     res.json(r.rows[0]);
+
   } catch(e) {
-    if (e.code==='23505') return res.status(409).json({error:'That email address is already used by another account.'});
-    console.error(e); res.status(500).json({error:'Could not update profile.'});
+    if (e.code==='23505') {
+      return res.status(409).json({error:'That email address is already used by another account.'});
+    }
+
+    console.error(e);
+    res.status(500).json({error:'Could not update profile.'});
   }
 });
 
