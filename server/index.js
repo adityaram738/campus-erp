@@ -999,15 +999,23 @@ app.get('/api/events/:id/participants', auth, organizer, async (req, res) => {
         error: 'Not your event.'
       });
     }
-
+    
+    
     const p = await pool.query(
-      `SELECT u.name,u.email,r.created_at
-       FROM registrations r
-       JOIN users u ON u.id=r.user_id
-       WHERE r.event_id=$1
-       ORDER BY r.created_at DESC`,
+      `SELECT
+      u.name,
+      u.email,
+      u.phone,
+      u.usn,
+      u.department,
+      r.created_at
+      FROM registrations r
+      JOIN users u ON u.id = r.user_id
+      WHERE r.event_id = $1
+      ORDER BY r.created_at DESC`,
       [req.params.id]
     );
+
 
     res.json(p.rows);
   } catch (err) {
