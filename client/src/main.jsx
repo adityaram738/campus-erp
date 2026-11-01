@@ -105,6 +105,7 @@ function App() {
   const [profileMenu, setProfileMenu] = useState(false);
   const [profileDraft, setProfileDraft] = useState(null);
   const [createdLoginId, setCreatedLoginId] = useState('');
+  const [pendingRegistration, setPendingRegistration] = useState(null);
 
   const headers = token
     ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
@@ -195,6 +196,15 @@ function App() {
       setProfileDraft(updated);
       setModal('');
       notify('Profile updated successfully');
+
+      // If the profile was opened from event registration, continue registration.
+      if (pendingRegistration) {
+        const eventToRegister = pendingRegistration;
+        setPendingRegistration(null);
+        await api(`/events/${eventToRegister.id}/register`, { method: 'POST' });
+        notify('Profile saved. Your event registration is confirmed!');
+        await refresh();
+      }
     } catch (e) {
       notify(e.message);
     } finally {
@@ -251,10 +261,28 @@ function App() {
       setModal('auth');
       return;
     }
+
     try {
+      // Require students to complete contact and academic details first.
+      if (user?.role === 'student') {
+        const profile = await api('/me/profile');
+        const complete =
+          /^[0-9]{10}$/.test((profile.phone || '').trim()) &&
+          (profile.usn || '').trim() &&
+          (profile.department || '').trim();
+
+        if (!complete) {
+          setPendingRegistration(e);
+          setProfileDraft(profile);
+          setModal('profile');
+          notify('Complete your phone number, USN and branch to register.');
+          return;
+        }
+      }
+
       await api(`/events/${e.id}/register`, { method: 'POST' });
       notify('You’re on the list! Registration confirmed.');
-      refresh();
+      await refresh();
     } catch (x) {
       notify(x.message);
     }
@@ -1013,7 +1041,11 @@ function App() {
                   <UserRound /> {user.role === 'organizer' ? 'ORGANIZER ACCOUNT' : 'STUDENT ACCOUNT'}
                 </div>
                 <h2>My profile.</h2>
-                <p className="modal-sub">Keep your campus details up to date.</p>
+                <p className="modal-sub">
+                  {pendingRegistration
+                    ? 'Before registering, complete your phone number, USN and branch. These details will be shared with the event organizer.'
+                    : 'Keep your campus details up to date.'}
+                </p>
                 <form className="stack-form" onSubmit={saveProfile}>
                   <div className="photo-editor">
                     {profileDraft.profile_image ? (
@@ -1073,6 +1105,7 @@ function App() {
                         minLength={10}
                         placeholder="10-digit phone number"
                         defaultValue={profileDraft.phone || ''}
+                        required={user.role === 'student' && !!pendingRegistration}
                         onChange={(e) => {
                             e.target.value = e.target.value.replace(/\D/g, '').slice(0, 10);
                         }}
@@ -1084,7 +1117,8 @@ function App() {
                             <input
                             name="usn"
                             defaultValue={profileDraft.usn || ''}
-                            placeholder="e.g. 1BM..." />
+                            placeholder="e.g. 1BM..."
+                            required={!!pendingRegistration} />
                         </label>
 )}
                   </div>
@@ -1094,10 +1128,11 @@ function App() {
                       name="department"
                       defaultValue={profileDraft.department || ''}
                       placeholder="e.g. Computer Science & Engineering"
+                      required={user.role === 'student' && !!pendingRegistration}
                     />
                   </label>
                   <button className="primary full" disabled={busy}>
-                    {busy ? 'Saving…' : 'Save profile'} <ArrowUpRight size={16} />
+                    {busy ? 'Saving…' : pendingRegistration ? 'Save & Register' : 'Save profile'} <ArrowUpRight size={16} />
                   </button>
                 </form>
               </>
@@ -1275,9 +1310,12 @@ function App() {
                   {participants.map((p, i) => (
                     <div className="participant" key={p.email}>
                       <div className="avatar">{initials(p.name)}</div>
-                      <div>
+                      <div className="participant-details">
                         <b>{p.name}</b>
                         <small>{p.email}</small>
+                        <small>Phone: {p.phone || 'Not provided'}</small>
+                        <small>USN: {p.usn || 'Not provided'}</small>
+                        <small>Branch: {p.department || 'Not provided'}</small>
                       </div>
                       <span>#{String(i + 1).padStart(3, '0')}</span>
                     </div>
@@ -1291,10 +1329,15 @@ function App() {
                 <button
                   className="outline full"
                   onClick={() => {
+                    const csvCell = value =>
+                      `"${String(value ?? '').replace(/"/g, '""')}"`;
                     const csv =
-                      'Name,Email,Registered\n' +
+                      'Name,Email,Phone,USN,Branch,Registered\n' +
                       participants
-                        .map(p => `"${p.name}","${p.email}","${p.created_at}"`)
+                        .map(p => [
+                          p.name, p.email, p.phone, p.usn,
+                          p.department, p.created_at
+                        ].map(csvCell).join(','))
                         .join('\n');
                     const a = document.createElement('a');
                     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
