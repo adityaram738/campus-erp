@@ -1,3 +1,5 @@
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const { Pool } = require('pg');
@@ -11,7 +13,10 @@ const PORT = process.env.PORT || 4000;
 const SECRET = process.env.JWT_SECRET || 'change-this-secret-before-deployment';
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL ||
-    `postgresql://${process.env.PGUSER || process.env.USER}@localhost:5432/${process.env.PGDATABASE || 'campusly'}`
+    `postgresql://${process.env.PGUSER || process.env.USER}@localhost:5432/${process.env.PGDATABASE || 'campusly'}`,
+  ssl: process.env.DATABASE_URL
+    ? { rejectUnauthorized: false }
+    : false
 });
 
 app.use(cors());
