@@ -337,7 +337,7 @@ function App() {
         <div className="workspace">
           <div className="campus-avatar">B</div>
           <div>
-            <b>State University</b>
+            <b>My University</b>
             <small>Campus Management System</small>
           </div>
           <ChevronRight size={15} />
