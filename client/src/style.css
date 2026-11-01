@@ -1688,26 +1688,35 @@ button {
   display: none;
 }
 
+/* Prevent unnecessary text selection */
 body {
-  -webkit-user-select: auto;
-  user-select: auto;
-}
-
-button,
-nav,
-.photo-upload,
-.sidebar,
-.no-select {
   -webkit-user-select: none;
   user-select: none;
 }
 
+/* Keep form fields selectable */
 input,
 textarea,
 select,
-p,
-.description,
-.event-description {
+[contenteditable="true"] {
   -webkit-user-select: text;
   user-select: text;
+}
+
+/* Allow selecting important content */
+p,
+.description,
+.event-description,
+pre,
+code {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Make demo credentials selectable and copyable */
+.demo-access,
+.demo-access * {
+  -webkit-user-select: text !important;
+  user-select: text !important;
+  cursor: text;
 }

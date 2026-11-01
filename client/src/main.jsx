@@ -931,7 +931,7 @@ function App() {
                     {busy ? 'Please wait…' : 'Sign in'} <ArrowUpRight size={16} />
                   </button>
                 </form>
-                <div className="demo-hint">
+                <div className="demo-hint demo-access">
                   Use For Demo Access 
                   <br />
                   Student · student@campuserp.dev / demo1234
