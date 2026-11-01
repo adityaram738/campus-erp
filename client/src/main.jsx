@@ -966,16 +966,39 @@ function App() {
                     {profileDraft.profile_image ? (
                       <img src={profileDraft.profile_image} alt="Profile preview" />
                     ) : (
-                      <div className="photo-placeholder">{initials(profileDraft.name)}</div>
+                      <div className="photo-placeholder">
+                        {initials(profileDraft.name)}
+                      </div>
                     )}
-                    <label className="photo-upload">
-                      <Camera size={15} /> Change photo
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={e => handleProfilePhoto(e.target.files?.[0])}
-                      />
-                    </label>
+
+                    <div className="photo-actions">
+                      <label className="photo-upload">
+                        <Camera size={15} /> Change photo
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={e => {
+                            handleProfilePhoto(e.target.files?.[0]);
+                            e.target.value = '';
+                          }}
+                        />
+                      </label>
+
+                      {profileDraft.profile_image && (
+                        <button
+                          type="button"
+                          className="outline"
+                          onClick={() =>
+                            setProfileDraft(p => ({
+                              ...p,
+                              profile_image: ''
+                            }))
+                          }
+                        >
+                          Remove photo
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <label>
                     Full name
@@ -983,7 +1006,7 @@ function App() {
                   </label>
                   <label>
                     Campus ERP login ID (cannot be changed)
-                    <input type="email" value={profileDraft.email || ''} readOnly />
+                    <input name="email" type="email" value={profileDraft.email || ''} readOnly />
                   </label>
                   <div className="form-row">
                     <label>

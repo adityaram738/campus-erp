@@ -1657,3 +1657,59 @@ button {
 .profile-dropdown {
     z-index:2
 }
+
+.photo-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.photo-actions .photo-upload,
+.photo-actions .outline {
+  height: 38px;
+  min-height: 38px;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  margin: 0;
+  padding: 0 15px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.photo-actions .photo-upload {
+  cursor: pointer;
+}
+
+.photo-actions .photo-upload input {
+  display: none;
+}
+
+/* Prevent unnecessary text selection */
+body {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* Keep form fields selectable */
+input,
+textarea,
+select,
+[contenteditable="true"] {
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Allow selecting important content */
+p,
+.description,
+.event-description,
+pre,
+code {
+  -webkit-user-select: text;
+  user-select: text;
+}
+

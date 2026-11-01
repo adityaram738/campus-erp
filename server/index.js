@@ -20,7 +20,7 @@ const pool = new Pool({
 });
 
 app.use(cors());
-app.use(express.json({limit:'2mb'}));
+app.use(express.json({limit:'5mb'}));
 
 async function initDb() {
   await pool.query(`
@@ -265,10 +265,10 @@ app.put('/api/me/profile',auth,async (req,res) => {
       [
         name.trim(),
         email.trim().toLowerCase(),
-        phone.trim(),
-        department.trim(),
-        usn.trim(),
-        profile_image,
+        (phone || '').trim(),
+        (department || '').trim(),
+        (usn || '').trim(),
+        profile_image || '',
         req.user.id
       ]
     );
