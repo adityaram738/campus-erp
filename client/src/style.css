@@ -1688,28 +1688,26 @@ button {
   display: none;
 }
 
-/* Prevent unnecessary text selection */
 body {
+  -webkit-user-select: auto;
+  user-select: auto;
+}
+
+button,
+nav,
+.photo-upload,
+.sidebar,
+.no-select {
   -webkit-user-select: none;
   user-select: none;
 }
 
-/* Keep form fields selectable */
 input,
 textarea,
 select,
-[contenteditable="true"] {
-  -webkit-user-select: text;
-  user-select: text;
-}
-
-/* Allow selecting important content */
 p,
 .description,
-.event-description,
-pre,
-code {
+.event-description {
   -webkit-user-select: text;
   user-select: text;
 }
-
