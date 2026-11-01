@@ -260,6 +260,27 @@ function App() {
     }
   }
 
+  function cancelRegistration(e) {
+    setSelected(e);
+    setModal('cancel-registration');
+  }
+
+  async function confirmCancelRegistration() {
+    if (!selected) return;
+    setBusy(true);
+    try {
+      await api(`/events/${selected.id}/register`, { method: 'DELETE' });
+      setRegistered(current => current.filter(item => item.id !== selected.id));
+      setModal('');
+      notify('Your registration has been cancelled.');
+      await refresh();
+    } catch (x) {
+      notify(x.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function save(e) {
     if (!token) {
       setModal('auth');
@@ -712,6 +733,7 @@ function App() {
                   }}
                   onSave={() => save(e)}
                   onRegister={() => register(e)}
+                  onCancel={() => cancelRegistration(e)}
                 />
               ))}
             </div>
@@ -906,6 +928,37 @@ function App() {
             <button className="modal-close" onClick={() => setModal('')}>
               <X />
             </button>
+            {modal === 'cancel-registration' && selected && (
+              <>
+                <div className="modal-brand">
+                  <Ticket /> REGISTRATION
+                </div>
+                <h2>Cancel registration?</h2>
+                <p className="modal-sub">
+                  Are you sure you want to cancel your registration for
+                  <b> {selected.title}</b>? You can register again later if registration is still open.
+                </p>
+                <div className="detail-actions">
+                  <button
+                    className="outline"
+                    type="button"
+                    onClick={() => setModal('')}
+                    disabled={busy}
+                  >
+                    Keep registration
+                  </button>
+                  <button
+                    className="primary"
+                    type="button"
+                    onClick={confirmCancelRegistration}
+                    disabled={busy}
+                  >
+                    {busy ? 'Cancelling…' : 'Yes, cancel registration'}
+                  </button>
+                </div>
+              </>
+            )}
+
             {modal === 'auth' && (
               <>
                 <div className="modal-brand">
@@ -1190,10 +1243,15 @@ function App() {
                   />
                 </div>
                 <div className="detail-actions">
-                  <button className="primary" onClick={() => register(selected)}>
-                    {isRegistered(selected) ? 'You’re registered ✓' : 'Register now'}{' '}
-                    <ArrowUpRight size={16} />
-                  </button>
+                  {isRegistered(selected) ? (
+                    <button className="outline" onClick={() => cancelRegistration(selected)}>
+                      Cancel registration
+                    </button>
+                  ) : (
+                    <button className="primary" onClick={() => register(selected)}>
+                      Register now <ArrowUpRight size={16} />
+                    </button>
+                  )}
                   <button className="outline" onClick={() => save(selected)}>
                     <Bookmark size={16} />
                     {isSaved(selected) ? 'Saved' : 'Save'}
@@ -1255,7 +1313,7 @@ function App() {
   );
 }
 
-function EventCard({ e, i, registered, saved, onOpen, onSave, onRegister }) {
+function EventCard({ e, i, registered, saved, onOpen, onSave, onRegister, onCancel }) {
   const eventDate = parseDate(e.date);
   return (
     <article className={`event-card ${i % 3 === 1 ? 'offset' : ''}`}>
@@ -1305,10 +1363,21 @@ function EventCard({ e, i, registered, saved, onOpen, onSave, onRegister }) {
             </div>
             <span>{e.registered || 0} going</span>
           </div>
-          <button className={registered ? 'registered-btn' : 'join-btn'} onClick={onRegister}>
-            {registered ? 'Registered ✓' : 'Join event'}{' '}
-            {!registered && <ArrowUpRight size={14} />}
-          </button>
+          <div className="event-registration-actions" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <button
+              className={registered ? 'registered-btn' : 'join-btn'}
+              onClick={onRegister}
+              disabled={registered}
+            >
+              {registered ? 'Registered ✓' : 'Join event'}{' '}
+              {!registered && <ArrowUpRight size={14} />}
+            </button>
+            {registered && onCancel && (
+              <button className="outline" onClick={onCancel}>
+                Cancel
+              </button>
+            )}
+          </div>
         </div>
       </div>
     </article>
