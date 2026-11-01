@@ -55,17 +55,27 @@ async function initDb() {
 
   await pool.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS phone TEXT, ADD COLUMN IF NOT EXISTS department TEXT, ADD COLUMN IF NOT EXISTS usn TEXT, ADD COLUMN IF NOT EXISTS profile_image TEXT`);
 
+  // Keep existing demo accounts working after the demo login IDs are renamed.
+  await pool.query(`
+    UPDATE users SET email='student@campuserp.dev'
+    WHERE email='student@campusly.dev'
+      AND NOT EXISTS (SELECT 1 FROM users WHERE email='student@campuserp.dev');
+    UPDATE users SET email='organizer.org@campuserp.dev'
+    WHERE email='organizer@campusly.dev'
+      AND NOT EXISTS (SELECT 1 FROM users WHERE email='organizer.org@campuserp.dev');
+  `);
+
   const count = await pool.query('SELECT COUNT(*)::int AS n FROM users');
   if (count.rows[0].n === 0) {
     const hash = await bcrypt.hash('demo1234', 10);
     const org = await pool.query(
       `INSERT INTO users(name,email,password,role)
        VALUES($1,$2,$3,$4) RETURNING id`,
-      ['Campus ERP Team','organizer@campusly.dev',hash,'organizer']
+      ['Campus ERP Team','organizer.org@campuserp.dev',hash,'organizer']
     );
     await pool.query(
       'INSERT INTO users(name,email,password,role) VALUES($1,$2,$3,$4)',
-      ['Alex Morgan','student@campusly.dev',hash,'student']
+      ['Alex Morgan','student@campuserp.dev',hash,'student']
     );
     const day = n => {
       const d = new Date();
@@ -108,25 +118,29 @@ const eventSelect = `SELECT e.*,u.name AS organizer,
   (SELECT COUNT(*)::int FROM registrations r WHERE r.event_id=e.id) AS registered
   FROM events e JOIN users u ON u.id=e.organizer_id`;
 
-app.post('/api/auth/register', async (req,res) => {
-  const {name,email,password,role='student'} = req.body;
-  if (!name || !email || !password || password.length < 8)
-    return res.status(400).json({error:'Name, email and a password of at least 8 characters are required.'});
-  if (!['student','organizer'].includes(role))
-    return res.status(400).json({error:'Invalid role.'});
-  try {
-    const hash = await bcrypt.hash(password,10);
-    const result = await pool.query(
-      `INSERT INTO users(name,email,password,role) VALUES($1,$2,$3,$4)
-       RETURNING id,name,email,role`,
-      [name.trim(),email.trim().toLowerCase(),hash,role]
-    );
-    const user = result.rows[0];
-    res.status(201).json({token:jwt.sign(user,SECRET,{expiresIn:'7d'}),user});
-  } catch (e) {
-    if (e.code === '23505') return res.status(409).json({error:'An account with this email already exists.'});
-    console.error(e); res.status(500).json({error:'Could not create account.'});
+function makeLoginIdCandidates(fullName, role) {
+  const normalized = fullName.normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const parts = normalized.split(/\s+/).filter(Boolean);
+  if (!parts.length) return [];
+
+  const first = parts[0];
+  const rest = parts.slice(1);
+  const initials = rest.map(part => part[0]).join('');
+  const candidates = [first];
+  if (rest.length === 1) {
+    candidates.push(`${first}.${rest[0]}`);
+  } else if (rest.length > 1) {
+    if (initials) candidates.push(`${first}.${initials}`);
+    candidates.push(`${first}.${rest[rest.length - 1]}`);
+    candidates.push(`${first}.${rest.join('.')}`);
   }
+  const unique = [...new Set(candidates)];
+  return unique.map(local => `${local}${role === 'organizer' ? '.org' : ''}@campuserp.dev`);
+}
+
+app.post('/api/auth/register', (req,res) => {
+  res.status(403).json({error:'Public registration is disabled. Use the demo accounts provided on the login page.'});
 });
 
 app.post('/api/auth/login', async (req,res) => {
@@ -241,11 +255,12 @@ app.get('/api/me/profile',auth,async (req,res) => {
 });
 
 app.put('/api/me/profile',auth,async (req,res) => {
-  const {name,email,phone='',department='',usn='',profile_image=''}=req.body;
-  if (!name?.trim() || !email?.trim()) return res.status(400).json({error:'Name and email are required.'});
+  const {name,phone='',department='',usn='',profile_image=''}=req.body;
+  if (!name?.trim()) return res.status(400).json({error:'Name is required.'});
   if (profile_image && !/^data:image\/(png|jpeg|jpg|webp|gif);base64,/.test(profile_image)) return res.status(400).json({error:'Invalid profile image.'});
   try {
-    const r=await pool.query(`UPDATE users SET name=$1,email=$2,phone=$3,department=$4,usn=$5,profile_image=$6 WHERE id=$7 RETURNING id,name,email,role,phone,department,usn,profile_image,created_at`,[name.trim(),email.trim().toLowerCase(),phone.trim(),department.trim(),usn.trim(),profile_image,req.user.id]);
+    // Login IDs are permanent; profile edits must not change the account email.
+    const r=await pool.query(`UPDATE users SET name=$1,phone=$2,department=$3,usn=$4,profile_image=$5 WHERE id=$6 RETURNING id,name,email,role,phone,department,usn,profile_image,created_at`,[name.trim(),phone.trim(),department.trim(),usn.trim(),profile_image,req.user.id]);
     if (!r.rows[0]) return res.status(404).json({error:'Profile not found.'});
     res.json(r.rows[0]);
   } catch(e) {

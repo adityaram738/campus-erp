@@ -104,6 +104,7 @@ function App() {
   const [authMode, setAuthMode] = useState('login');
   const [profileMenu, setProfileMenu] = useState(false);
   const [profileDraft, setProfileDraft] = useState(null);
+  const [createdLoginId, setCreatedLoginId] = useState('');
 
   const headers = token
     ? { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
@@ -223,19 +224,21 @@ function App() {
     try {
       const data = await api('/auth/' + (authMode === 'login' ? 'login' : 'register'), {
         method: 'POST',
-        body: JSON.stringify({
-          name: f.get('name'),
-          email: f.get('email'),
-          password: f.get('password'),
-          role: f.get('role') || 'student'
-        })
+        body: JSON.stringify(authMode === 'login'
+          ? { email: f.get('email'), password: f.get('password') }
+          : { name: f.get('name'), password: f.get('password'), role: f.get('role') || 'student' })
       });
       setToken(data.token);
       setUser(data.user);
       localStorage.token = data.token;
       localStorage.user = JSON.stringify(data.user);
-      setModal('');
-      notify(`Welcome ${data.user.name.split(' ')[0]}!`);
+      if (authMode === 'register') {
+        setCreatedLoginId(data.generatedLoginId || data.user.email);
+        setModal('created');
+      } else {
+        setModal('');
+        notify(`Welcome ${data.user.name.split(' ')[0]}!`);
+      }
     } catch (e) {
       notify(e.message);
     } finally {
@@ -337,7 +340,7 @@ function App() {
         <div className="workspace">
           <div className="campus-avatar">B</div>
           <div>
-            <b>My University</b>
+            <b>BMS University</b>
             <small>Campus Management System</small>
           </div>
           <ChevronRight size={15} />
@@ -908,66 +911,46 @@ function App() {
                 <div className="modal-brand">
                   <Sparkles /> Campus ERP
                 </div>
-                <h2>{authMode === 'login' ? 'Welcome back.' : 'Join the campus.'}</h2>
-                <p className="modal-sub">
-                  {authMode === 'login'
-                    ? 'Sign in to keep your campus life moving.'
-                    : 'Create an account and never miss a moment.'}
-                </p>
+                <h2>Welcome back.</h2>
+                <p className="modal-sub">Sign in to keep your campus life moving.</p>
                 <form onSubmit={authSubmit} className="stack-form">
-                  {authMode === 'register' && (
-                    <label>
-                      Full name
-                      <input name="name" placeholder="Your name" required />
-                    </label>
-                  )}
                   <label>
-                    College email
-                    <input name="email" type="email" placeholder="you@college.edu" required />
+                    Campus ERP login ID
+                    <input name="email" type="email" placeholder="student@campuserp.dev" required />
                   </label>
                   <label>
                     Password
                     <input
                       name="password"
                       type="password"
-                      minLength="8"
-                      placeholder="At least 8 characters"
+                      placeholder="Enter your password"
                       required
                     />
                   </label>
-                  {authMode === 'register' && (
-                    <label>
-                      I am a
-                      <select name="role">
-                        <option value="student">Student</option>
-                        <option value="organizer">Event organizer</option>
-                      </select>
-                    </label>
-                  )}
                   <button className="primary full" disabled={busy}>
-                    {busy
-                      ? 'Please wait…'
-                      : authMode === 'login'
-                      ? 'Sign in'
-                      : 'Create account'}{' '}
-                    <ArrowUpRight size={16} />
+                    {busy ? 'Please wait…' : 'Sign in'} <ArrowUpRight size={16} />
                   </button>
                 </form>
-                <div className="switch-auth">
-                  {authMode === 'login' ? 'New to Campus ERP?' : 'Already have an account?'}{' '}
-                  <button
-                    onClick={() =>
-                      setAuthMode(authMode === 'login' ? 'register' : 'login')
-                    }
-                  >
-                    {authMode === 'login' ? 'Create account' : 'Sign in'}
-                  </button>
-                </div>
                 <div className="demo-hint">
-                  DEMO ACCESS · student@campusly.dev / demo1234
+                  Use For Demo Access 
                   <br />
-                  Organizer · organizer@campusly.dev / demo1234
+                  Student · student@campuserp.dev / demo1234
+                  <br />
+                  Organizer · organizer.org@campuserp.dev / demo1234
                 </div>
+              </>
+            )}
+
+            {modal === 'created' && (
+              <>
+                <div className="modal-brand"><CheckCircle2 /> ACCOUNT CREATED</div>
+                <h2>Your login ID.</h2>
+                <p className="modal-sub">Save this ID. You will use it with your password whenever you sign in. This is an internal login ID, not an email inbox.</p>
+                <div className="demo-hint" style={{fontSize:'1rem', wordBreak:'break-word'}}>{createdLoginId}</div>
+                <button className="primary full" type="button" onClick={() => {
+                  navigator.clipboard?.writeText(createdLoginId).then(() => notify('Login ID copied')).catch(() => {});
+                }}>Copy login ID</button>
+                <button className="secondary full" type="button" onClick={() => setModal('')}>Continue to Campus ERP</button>
               </>
             )}
 
@@ -999,13 +982,8 @@ function App() {
                     <input name="name" defaultValue={profileDraft.name || ''} required />
                   </label>
                   <label>
-                    Email address
-                    <input
-                      name="email"
-                      type="email"
-                      defaultValue={profileDraft.email || ''}
-                      required
-                    />
+                    Campus ERP login ID (cannot be changed)
+                    <input type="email" value={profileDraft.email || ''} readOnly />
                   </label>
                   <div className="form-row">
                     <label>
