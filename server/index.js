@@ -933,9 +933,9 @@ app.get('/api/organizer/overview', auth, organizer, async (req, res) => {
     const admin = req.user.role === 'admin';
 
     const r = await pool.query(
-      `SELECT * FROM events
-       ${admin ? '' : 'WHERE organizer_id=$1'}
-       ORDER BY date`,
+      `${eventSelect}
+       ${admin ? '' : 'WHERE e.organizer_id=$1'}
+       ORDER BY e.date`,
       admin ? [] : [req.user.id]
     );
 
@@ -999,23 +999,21 @@ app.get('/api/events/:id/participants', auth, organizer, async (req, res) => {
         error: 'Not your event.'
       });
     }
-    
-    
+
     const p = await pool.query(
       `SELECT
-      u.name,
-      u.email,
-      u.phone,
-      u.usn,
-      u.department,
-      r.created_at
-      FROM registrations r
-      JOIN users u ON u.id = r.user_id
-      WHERE r.event_id = $1
-      ORDER BY r.created_at DESC`,
+        u.name,
+        u.email,
+        u.phone,
+        u.usn,
+        u.department,
+        r.created_at
+       FROM registrations r
+       JOIN users u ON u.id = r.user_id
+       WHERE r.event_id = $1
+       ORDER BY r.created_at DESC`,
       [req.params.id]
     );
-
 
     res.json(p.rows);
   } catch (err) {
